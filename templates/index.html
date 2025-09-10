@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI RAG Bot - Advanced AI Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-robot"></i>
+                    <h1>AI RAG Bot</h1>
+                </div>
+                <div class="header-controls">
+                    <button id="settingsBtn" class="btn btn-secondary">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                    <button id="documentsBtn" class="btn btn-secondary">
+                        <i class="fas fa-file-alt"></i> Documents
+                    </button>
+                    <button id="statsBtn" class="btn btn-secondary">
+                        <i class="fas fa-chart-bar"></i> Stats
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-comments"></i> Chat Sessions</h3>
+                    <button id="newSessionBtn" class="btn btn-primary full-width">
+                        <i class="fas fa-plus"></i> New Session
+                    </button>
+                    <div id="sessionsList" class="sessions-list">
+                        <!-- Sessions will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-upload"></i> Upload Documents</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop files here or click to browse</p>
+                        <input type="file" id="fileInput" multiple accept=".pdf,.txt,.docx,.md,.html,.csv,.json">
+                    </div>
+                    <div id="uploadProgress" class="upload-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <span class="progress-text">Uploading...</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-database"></i> Knowledge Base</h3>
+                    <div class="kb-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Documents:</span>
+                            <span id="docCount" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Chunks:</span>
+                            <span id="chunkCount" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    <button id="searchDocsBtn" class="btn btn-outline full-width">
+                        <i class="fas fa-search"></i> Search Documents
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Chat Area -->
+            <section class="chat-container">
+                <div class="chat-header">
+                    <div class="session-info">
+                        <h2 id="sessionTitle">Welcome to AI RAG Bot</h2>
+                        <span id="sessionStatus" class="status-indicator">Ready</span>
+                    </div>
+                    <div class="chat-controls">
+                        <button id="ragToggle" class="btn btn-toggle active" title="Toggle RAG">
+                            <i class="fas fa-brain"></i> RAG
+                        </button>
+                        <button id="clearChatBtn" class="btn btn-outline" title="Clear Chat">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button id="exportChatBtn" class="btn btn-outline" title="Export Chat">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="chatMessages" class="chat-messages">
+                    <div class="welcome-message">
+                        <div class="bot-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <h3>Welcome to AI RAG Bot! 🤖</h3>
+                            <p>I'm your advanced AI assistant with RAG (Retrieval-Augmented Generation) capabilities. Here's what I can do:</p>
+                            <ul>
+                                <li><strong>Answer questions</strong> using both my training data and your uploaded documents</li>
+                                <li><strong>Analyze documents</strong> in various formats (PDF, DOCX, TXT, MD, HTML, CSV, JSON)</li>
+                                <li><strong>Provide contextual responses</strong> with source citations</li>
+                                <li><strong>Maintain conversation history</strong> for better context understanding</li>
+                            </ul>
+                            <p>To get started:</p>
+                            <ol>
+                                <li>Upload some documents using the sidebar</li>
+                                <li>Start a new chat session</li>
+                                <li>Ask me anything!</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <textarea id="messageInput" placeholder="Type your message here... (Shift+Enter for new line)" rows="1"></textarea>
+                        <button id="sendBtn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="input-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="useRagCheckbox" checked>
+                            <span class="checkmark"></span>
+                            Use RAG (Retrieval-Augmented Generation)
+                        </label>
+                        <div class="typing-indicator hidden" id="typingIndicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>AI Model Settings</h3>
+                    <div class="form-group">
+                        <label for="modelSelect">Model:</label>
+                        <select id="modelSelect">
+                            <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                            <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                            <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="temperatureSlider">Temperature: <span id="temperatureValue">0.7</span></label>
+                        <input type="range" id="temperatureSlider" min="0" max="1" step="0.1" value="0.7">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxTokensInput">Max Tokens:</label>
+                        <input type="number" id="maxTokensInput" value="4000" min="100" max="8000">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>System Prompt</h3>
+                    <textarea id="systemPromptInput" rows="6" placeholder="Enter custom system prompt..."></textarea>
+                </div>
+                <div class="settings-section">
+                    <h3>RAG Settings</h3>
+                    <div class="form-group">
+                        <label for="ragResultsSlider">Search Results: <span id="ragResultsValue">5</span></label>
+                        <input type="range" id="ragResultsSlider" min="1" max="10" step="1" value="5">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+                <button class="btn btn-secondary modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents Modal -->
+    <div id="documentsModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-alt"></i> Document Management</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="documents-controls">
+                    <input type="text" id="docSearchInput" placeholder="Search documents...">
+                    <button id="refreshDocsBtn" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+                <div id="documentsList" class="documents-list">
+                    <!-- Documents will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Modal -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-bar"></i> Statistics</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="statisticsContent">
+                    <!-- Statistics will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Search Modal -->
+    <div id="docSearchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-search"></i> Search Documents</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" id="searchQueryInput" placeholder="Enter search query...">
+                    <button id="executeSearchBtn" class="btn btn-primary">Search</button>
+                </div>
+                <div id="searchResults" class="search-results">
+                    <!-- Search results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
